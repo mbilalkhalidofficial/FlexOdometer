@@ -3,24 +3,16 @@ import {
   Text,
   SafeAreaView,
   StatusBar,
-  Button,
   TextInput,
   Image,
   View,
   TouchableOpacity,
   ScrollView,
-  Dimensions,
 } from 'react-native';
-import BouncyCheckbox from 'react-native-bouncy-checkbox';
-import RadioForm, {
-  RadioButton,
-  RadioButtonInput,
-  RadioButtonLabel,
-} from 'react-native-simple-radio-button';
 import {getPreciseDistance} from 'geolib';
 import GetLocation from 'react-native-get-location';
 import Svg, {Path} from 'react-native-svg';
-import {Picker} from '@react-native-picker/picker';
+import PushNotification, {Importance} from 'react-native-push-notification';
 
 export default function Home() {
   const [currentLocation, setCurrentLocation] = useState({
@@ -35,10 +27,14 @@ export default function Home() {
   const [time, setTime] = useState(0);
   const [distance, setDistance] = useState(false);
   const [isInMile, setIsInMile] = useState(false);
-  const [isAscending, setIsAscending] = useState(false);
+  const [isAscending, setIsAscending] = useState(true);
   const [calcDistance, setCalcDistance] = useState(false);
   const [distanceCovered, setDistanceCovered] = useState(0);
   const [selectedLanguage, setSelectedLanguage] = useState([]);
+
+  useEffect(() => {
+    setSelectedLanguage(isInMile ? 'Mile' : 'Km');
+  }, [isInMile]);
 
   useEffect(() => {
     GetLocation.getCurrentPosition({
@@ -90,13 +86,46 @@ export default function Home() {
   }, [liveLocation]);
 
   useEffect(() => {
-    let newDistance =
-      selectedLanguage === 'Mile'
-        ? text * 1000 + distance
-        : text * 1000 * 0.621371 + distance;
-    setDistanceCovered(newDistance);
+    if (selectedLanguage === 'Mile') {
+      setDistanceCovered(
+        isAscending
+          ? text * 1000 * 0.621371 + distance
+          : text * 1000 * 0.621371 - distance,
+      );
+    } else {
+      setDistanceCovered(
+        isAscending ? text * 1000 + distance : text * 1000 - distance,
+      );
+    }
   }, [liveLocation]);
-
+  function sendNotification() {
+    PushNotification.localNotification({
+      channelId: 'channel-id',
+      //... You can use all the options from localNotifications
+      message: 'My Notification Message', // (required)
+      date: new Date(Date.now() + 60 * 1000), // in 60 secs
+      allowWhileIdle: false, // (optional) set notification to work while on doze, default: false
+      /* Android Only Properties */
+      repeatTime: 1, // (optional) Increment of configured repeatType. Check 'Repeating Notifications' section for more info.
+    });
+  }
+  useEffect(() => {
+    PushNotification.createChannel(
+      {
+        channelId: 'channel-id', // (required)
+        channelName: 'My channel', // (required)
+        channelDescription: 'A channel to categorise your notifications', // (optional) default: undefined.
+        playSound: false, // (optional) default: true
+        soundName: 'default', // (optional) See `soundName` parameter of `localNotification` function
+        importance: Importance.HIGH, // (optional) default: Importance.HIGH. Int value of the Android notification importance
+        vibrate: true, // (optional) default: true. Creates the default vibration pattern if true.
+      },
+      created => console.log(`createChannel returned '${created}'`), // (optional) callback returns whether the channel was created, false means it already existed.
+    );
+    if (time !== 0 && time === text) {
+      sendNotification();
+    }
+  }, [text, time]);
   return (
     <>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
@@ -171,45 +200,22 @@ export default function Home() {
                 </Text>
               </View>
             ) : (
-              <View
+              <TextInput
+                placeholder="Start / Current Marker"
+                placeholderTextColor="#929292"
+                keyboardType="number-pad"
+                onChangeText={e => {
+                  setText(e);
+                }}
                 style={{
-                  flexDirection: 'row',
+                  color: '#242424',
                   backgroundColor: '#F1F1F1',
                   width: '100%',
                   marginVertical: 10,
                   borderRadius: 5,
-                  paddingLeft: 20,
-                }}>
-                <TextInput
-                  placeholder="Start / Current Marker"
-                  placeholderTextColor="#929292"
-                  value={text}
-                  keyboardType="number-pad"
-                  onChangeText={e => {
-                    setText(e);
-                  }}
-                  style={{
-                    color: '#242424',
-                    width: '60%',
-                  }}
-                />
-                <Picker
-                  style={{
-                    color: '#242424',
-                    width: '40%',
-                  }}
-                  selectedValue={selectedLanguage}
-                  onValueChange={(itemValue, itemIndex) =>
-                    setSelectedLanguage(itemValue)
-                  }>
-                  <Picker.Item
-                    label="Mile"
-                    value="Mile"
-                    style={{fontSize: 12}}
-                  />
-                  <Picker.Item label="Km" value="Km" style={{fontSize: 12}} />
-                </Picker>
-              </View>
+                  paddingHorizontal: 20,
+                }}
+              />
             )}
             <View style={{flexDirection: 'row', marginBottom: 10}}>
               <TouchableOpacity
@@ -298,95 +304,94 @@ export default function Home() {
                 )}
               </TouchableOpacity>
             </View>
-            {calcDistance ? (
-              <View style={{flexDirection: 'row', marginBottom: 10}}>
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsInMile(true);
-                  }}
-                  style={{
-                    backgroundColor: isInMile ? '#0086b0' : '#E6F9FF',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    flex: 1,
-                    marginRight: 10,
-                    paddingHorizontal: 15,
-                    paddingVertical: 10,
-                    borderRadius: 5,
-                    justifyContent: 'space-between',
-                  }}>
-                  <Text style={{color: isInMile ? '#E6F9FF' : '#0086b0'}}>
-                    Miles
-                  </Text>
-                  {isInMile ? (
-                    <View
-                      style={{
-                        backgroundColor: '#ffffff',
-                        width: 20,
-                        height: 20,
-                        borderRadius: 50,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}>
-                      <Svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width={14.017}
-                        height={10.199}
-                        viewBox="0 0 15.017 11.199">
-                        <Path
-                          data-name="Icon awesome-check"
-                          d="M5.1 15.556L.22 10.675a.751.751 0 010-1.062l1.062-1.062a.751.751 0 011.062 0l3.288 3.288L12.674 4.8a.751.751 0 011.062 0L14.8 5.859a.751.751 0 010 1.062l-8.638 8.635a.751.751 0 01-1.062 0z"
-                          transform="translate(0 -4.577)"
-                          fill="#0086b0"
-                        />
-                      </Svg>
-                    </View>
-                  ) : null}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsInMile(false);
-                  }}
-                  style={{
-                    backgroundColor: isInMile ? '#E6F9FF' : '#0086b0',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    flex: 1,
-                    paddingHorizontal: 15,
-                    paddingVertical: 10,
-                    borderRadius: 5,
-                    justifyContent: 'space-between',
-                  }}>
-                  <Text style={{color: isInMile ? '#0086b0' : '#ffffff'}}>
-                    Km
-                  </Text>
-                  {isInMile ? null : (
-                    <View
-                      style={{
-                        backgroundColor: '#ffffff',
-                        width: 20,
-                        height: 20,
-                        borderRadius: 50,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}>
-                      <Svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        width={14.017}
-                        height={10.199}
-                        viewBox="0 0 15.017 11.199">
-                        <Path
-                          data-name="Icon awesome-check"
-                          d="M5.1 15.556L.22 10.675a.751.751 0 010-1.062l1.062-1.062a.751.751 0 011.062 0l3.288 3.288L12.674 4.8a.751.751 0 011.062 0L14.8 5.859a.751.751 0 010 1.062l-8.638 8.635a.751.751 0 01-1.062 0z"
-                          transform="translate(0 -4.577)"
-                          fill="#0086b0"
-                        />
-                      </Svg>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : null}
+            <View style={{flexDirection: 'row', marginBottom: 10}}>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsInMile(true);
+                }}
+                style={{
+                  backgroundColor: isInMile ? '#0086b0' : '#E6F9FF',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  flex: 1,
+                  marginRight: 10,
+                  paddingHorizontal: 15,
+                  paddingVertical: 10,
+                  borderRadius: 5,
+                  justifyContent: 'space-between',
+                }}>
+                <Text style={{color: isInMile ? '#E6F9FF' : '#0086b0'}}>
+                  Miles
+                </Text>
+                {isInMile ? (
+                  <View
+                    style={{
+                      backgroundColor: '#ffffff',
+                      width: 20,
+                      height: 20,
+                      borderRadius: 50,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                    <Svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width={14.017}
+                      height={10.199}
+                      viewBox="0 0 15.017 11.199">
+                      <Path
+                        data-name="Icon awesome-check"
+                        d="M5.1 15.556L.22 10.675a.751.751 0 010-1.062l1.062-1.062a.751.751 0 011.062 0l3.288 3.288L12.674 4.8a.751.751 0 011.062 0L14.8 5.859a.751.751 0 010 1.062l-8.638 8.635a.751.751 0 01-1.062 0z"
+                        transform="translate(0 -4.577)"
+                        fill="#0086b0"
+                      />
+                    </Svg>
+                  </View>
+                ) : null}
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsInMile(false);
+                }}
+                style={{
+                  backgroundColor: isInMile ? '#E6F9FF' : '#0086b0',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  flex: 1,
+                  paddingHorizontal: 15,
+                  paddingVertical: 10,
+                  borderRadius: 5,
+                  justifyContent: 'space-between',
+                }}>
+                <Text style={{color: isInMile ? '#0086b0' : '#ffffff'}}>
+                  Km
+                </Text>
+                {isInMile ? null : (
+                  <View
+                    style={{
+                      backgroundColor: '#ffffff',
+                      width: 20,
+                      height: 20,
+                      borderRadius: 50,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                    <Svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width={14.017}
+                      height={10.199}
+                      viewBox="0 0 15.017 11.199">
+                      <Path
+                        data-name="Icon awesome-check"
+                        d="M5.1 15.556L.22 10.675a.751.751 0 010-1.062l1.062-1.062a.751.751 0 011.062 0l3.288 3.288L12.674 4.8a.751.751 0 011.062 0L14.8 5.859a.751.751 0 010 1.062l-8.638 8.635a.751.751 0 01-1.062 0z"
+                        transform="translate(0 -4.577)"
+                        fill="#0086b0"
+                      />
+                    </Svg>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+
             <TouchableOpacity
               onPress={
                 calcDistance
