@@ -30,11 +30,6 @@ export default function Home() {
   const [isAscending, setIsAscending] = useState(true);
   const [calcDistance, setCalcDistance] = useState(false);
   const [distanceCovered, setDistanceCovered] = useState(0);
-  const [selectedLanguage, setSelectedLanguage] = useState([]);
-
-  useEffect(() => {
-    setSelectedLanguage(isInMile ? 'Mile' : 'Km');
-  }, [isInMile]);
 
   useEffect(() => {
     GetLocation.getCurrentPosition({
@@ -86,7 +81,7 @@ export default function Home() {
   }, [liveLocation]);
 
   useEffect(() => {
-    if (selectedLanguage === 'Mile') {
+    if (isInMile) {
       setDistanceCovered(
         isAscending
           ? text * 1000 * 0.621371 + distance
@@ -192,8 +187,8 @@ export default function Home() {
                     marginRight: 5,
                   }}>
                   {isInMile
-                    ? (distanceCovered * 0.000621371192).toFixed(1)
-                    : (distanceCovered / 1000).toFixed(1)}
+                    ? (distanceCovered * 0.000621371192).toFixed(3)
+                    : (distanceCovered / 1000).toFixed(3)}
                 </Text>
                 <Text style={{color: '#0086b0'}}>
                   {isInMile ? 'Miles' : 'Km'}
