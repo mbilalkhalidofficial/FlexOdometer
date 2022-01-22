@@ -187,14 +187,14 @@ export default function Home() {
                     marginRight: 5,
                   }}>
                   {isInMile
-                    ? (distanceCovered * 0.000621371192).toFixed(2) <=
-                      (20 / 1000).toFixed(2)
+                    ? (distanceCovered * 0.000621371192).toFixed(1) <=
+                      (20 / 1000).toFixed(1)
                       ? (distanceCovered * 0.000621371192).toFixed(1)
-                      : (distanceCovered * 0.000621371192).toFixed(2)
-                    : (distanceCovered / 1000).toFixed(2) <=
-                      (20 / 1000).toFixed(2)
+                      : (distanceCovered * 0.000621371192).toFixed(1)
+                    : (distanceCovered / 1000).toFixed(1) <=
+                      (20 / 1000).toFixed(1)
                     ? (distanceCovered / 1000).toFixed(1)
-                    : (distanceCovered / 1000).toFixed(2)}
+                    : (distanceCovered / 1000).toFixed(1)}
                 </Text>
                 <Text style={{color: '#0086b0'}}>
                   {isInMile ? 'Miles' : 'Km'}
